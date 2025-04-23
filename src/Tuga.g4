@@ -1,13 +1,26 @@
 grammar Tuga;
 
 // PARSER RULES
-program :   instruction+ EOF;
+program :   declarations? instruction* EOF;
 
-instruction :   'escreve' expression ';';
+// DECLARATIONS
+declarations : declaration+ ;
+declaration : variableList ':' type ';' ;
+variableList : IDENTIFIER (',' IDENTIFIER)* ;
+type         : 'inteiro' | 'real' | 'booleano' | 'string' ;
 
+instruction
+    :   'escreve' expression ';'                                        # WriteInstr
+    |   IDENTIFIER '<-' expression ';'                                  # AssignInstr
+    |   'inicio' instruction* 'fim'                                      # BlockInstr
+    |   'enquanto' '(' expression ')' instruction                       # WhileInstr
+    |   'se' '(' expression ')' instruction ('senao' instruction)?      # IfElseInstr
+    |   ';'                                                             # EmptyInstr
+    ;
 // EXPRESSOES
 expression
     :   literal                                                 # LiteralExpr
+    |   IDENTIFIER                                              # VarExpr
     |   '(' expression ')'                                      # ParenExpr
     |   op=('-' | 'nao') expression                             # UnaryExpr
     |   expression op=('*' | '/' | '%') expression              # BinaryExpr
@@ -22,14 +35,36 @@ literal
     :   INTEGER     # IntLiteral
     |   REAL        # RealLiteral
     |   STRING      # StringLiteral
-    |   BOOLEAN     # BoolLiteral
+    |   VERDADEIRO  # BoolLiteral
+    |   FALSO       # BoolLiteral
     ;
 
 // LEXER RULES
 INTEGER:    [0-9]+ ;
 REAL:   [0-9]+ '.' [0-9]* | '.' [0-9]+ ;
 STRING: '"' (~["\r\n] | '\\"')* '"' ;
-BOOLEAN:    'verdadeiro' | 'falso';
+
+// RESERVED WORDS
+ESCREVE: 'escreve';
+INICIO: 'inicio';
+FIM: 'fim';
+ENQUANTO: 'enquanto';
+SE: 'se';
+SENAO: 'senao';
+INTEIRO_KW: 'inteiro';
+REAL_KW: 'real';
+BOOLEANO_KW: 'booleano';
+STRING_KW: 'string';
+VERDADEIRO: 'verdadeiro';
+FALSO: 'falso';
+NAO: 'nao';
+E: 'e';
+OU: 'ou';
+IGUAL: 'igual';
+DIFERENTE: 'diferente';
+
+// IDENTIFIER
+IDENTIFIER: [a-zA-Z_] [a-zA-Z0-9_]* ;
 
 // IGNORE WHITESPACE AND COMMENTS
 WS : [ \t\r\n]+ -> skip ;

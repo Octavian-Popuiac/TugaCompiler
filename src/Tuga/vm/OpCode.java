@@ -8,6 +8,11 @@ public enum OpCode {
     iconst(1),  //  0: Empilha o valor inteiro n no stack
     dconst(1),  //  1: Empilha o valor real da position n na constant pool, no stack
     sconst(1),  //  2: Empilha a string da position n na constant pool, no stack
+    jump(1),    // 41: Unconditional jump. Atualiza o instruction pointer de modo a que a proxima instrucao a ser executada seja aquela que se encontra na posicao addr do array de instrucoes
+    jumpf(1),   // 42: Jump if false: faz pop do Stack. Se o valor for false, atualiza o instruction pointer de modo a que a proxima instrucao a ser executada seja aquela que se encontra na posicao addr do array de instrucoes
+    galloc(1),  // 43: Global memory allocation: Aloca n posicoes num array que permite armazenar variaveis globais. Array designado por Globals. Essas n posicoes de memoria ficam inicializadas com o valor NULO
+    gload(1),   // 44: Global load: Empilha Globals[addr] no stakc
+    gstore(1),  // 45: Global store: Faz pop do stack e guarda o valor em Globals[addr]
 
     //  Instrucoes sem argumentos (1 byte, apenas o opcode)
     iprint(0),  // 3: Faz pop do operando a, e escreve o seu valor no ecra seguido de um caracter de mudanca de linha (inteiro)
