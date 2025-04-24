@@ -74,7 +74,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         // Contar e registar todas as variaveis
         for (TugaParser.DeclarationContext decl : ctx.declaration()){
             for (TerminalNode id : decl.variableList().IDENTIFIER()){
-                registerVariabl(id.getText());
+                registerVariable(id.getText());
                 totalVars++;
             }
         }
@@ -126,7 +126,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         visit(ctx.instruction());
 
         // Salto incondicional de volta ao inicio
-        emit(OpCode.jumpf, startLabel);
+        emit(OpCode.jump, startLabel);
 
         // Atualiza o jumpf para saltar para aqui (final loop)
         int endPos = code.size();
@@ -214,7 +214,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     // BOOLLITERAL: BOOLEAN
     @Override
     public Void visitBoolLiteral(TugaParser.BoolLiteralContext ctx) {
-        boolean value = ctx.BOOLEAN().getText().equals("verdadeiro");
+        boolean value = ctx.VERDADEIRO() != null;
         if (value) {
             emit(OpCode.tconst);
         } else {
@@ -567,7 +567,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     }
 
     // Metodo para registrar as variaveis na tabela
-    private void registerVariabl(String name){
+    private void registerVariable(String name){
         variableAddress.put(name, nexVarrAddress++);
     }
 
