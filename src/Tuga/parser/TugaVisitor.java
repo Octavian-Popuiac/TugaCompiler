@@ -1,4 +1,4 @@
-// Generated from /Users/octavianpopuiac/Documents/Universidade/2024:2025/Semestre2/Compiladores/Projeto/Tuga/src/Tuga.g4 by ANTLR 4.13.2
+// Generated from /Users/octavianpopuiac/Documents/Universidade/ProjetoCompiladores/Tuga/src/Tuga.g4 by ANTLR 4.13.2
 package Tuga.parser;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -17,11 +17,71 @@ public interface TugaVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitProgram(TugaParser.ProgramContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link TugaParser#instruction}.
+	 * Visit a parse tree produced by {@link TugaParser#declarations}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitInstruction(TugaParser.InstructionContext ctx);
+	T visitDeclarations(TugaParser.DeclarationsContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link TugaParser#declaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDeclaration(TugaParser.DeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link TugaParser#variableList}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVariableList(TugaParser.VariableListContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link TugaParser#type}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitType(TugaParser.TypeContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code WriteInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWriteInstr(TugaParser.WriteInstrContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code AssignInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAssignInstr(TugaParser.AssignInstrContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code BlockInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBlockInstr(TugaParser.BlockInstrContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code WhileInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWhileInstr(TugaParser.WhileInstrContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code IfElseInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitIfElseInstr(TugaParser.IfElseInstrContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code EmptyInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitEmptyInstr(TugaParser.EmptyInstrContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code AndExpr}
 	 * labeled alternative in {@link TugaParser#expression}.
@@ -57,6 +117,13 @@ public interface TugaVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitLiteralExpr(TugaParser.LiteralExprContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code VarExpr}
+	 * labeled alternative in {@link TugaParser#expression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVarExpr(TugaParser.VarExprContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code ParenExpr}
 	 * labeled alternative in {@link TugaParser#expression}.

@@ -18,6 +18,7 @@ public class SVirtualMachine {
     private int ip;                //  Instruction pointes
     private final Stack<Object> stack;  //  Pilha de execucao
     private final ConstantPool constantPool;    //  Pool de constantes
+    private List<Object> globals = new ArrayList<>();    // Global memory allocation array
 
     public SVirtualMachine(){
         this(false);
@@ -198,6 +199,11 @@ public class SVirtualMachine {
             case iconst -> execIconst((Instruction1Arg) inst);
             case dconst -> execDconst((Instruction1Arg) inst);
             case sconst -> execSconst((Instruction1Arg) inst);
+            case jump -> execJump((Instruction1Arg) inst);
+            case jumpf -> execJumpf((Instruction1Arg) inst);
+            case galloc -> execGalloc((Instruction1Arg) inst);
+            case gload -> execGload((Instruction1Arg) inst);
+            case gstore -> execGstore((Instruction1Arg) inst);
 
             //  Instrucoes para inteiros
             case iprint -> execIprint();
@@ -266,7 +272,7 @@ public class SVirtualMachine {
      * Controlo de execucao
      */
     private void execHalt() {
-        // Termina a execução do programa, setando o ip para o final do código
+        // Termina a execução do programa, defenindo o ip para o final do código
         ip = code.length;
     }
 
@@ -729,6 +735,56 @@ public class SVirtualMachine {
         stack.push(value);
     }
 
+    private void execJump(Instruction1Arg inst) {
+        // Atualiza a instruction pointer para o endereco especificado
+        // Subtrai 1 porque o ip sera incrementado no final do loop
+        ip = inst.getArg() - 1;
+    }
+
+    private void execJumpf(Instruction1Arg inst){
+        checkStackSize(1);
+        Object value = stack.pop();
+
+        // Se o valor for 0 (false), faz o jump
+        if (value instanceof Integer && (Integer)value == 0){
+            // Subtrai 1 porque o ip sera incrementado no final do loop
+            ip = inst.getArg() - 1;
+        }
+    }
+
+    private void execGalloc(Instruction1Arg inst){
+        int size = inst.getArg();
+        // Inicia as variaveis globais como NULO (null)
+        for (int i = 0; i < size; i++){
+            globals.add(null);
+        }
+    }
+
+    private void execGload(Instruction1Arg inst){
+        int addr = inst.getArg();
+        if (addr >= 0 && addr < globals.size()){
+            Object value = globals.get(addr);
+            if (value == null){
+                runtimeError("Acesso a Variavel nao inicializada");
+            }
+            stack.push(value);
+        }else {
+            runtimeError("Indice de variavel global invalido: " + addr);
+        }
+    }
+
+    private void execGstore(Instruction1Arg inst){
+        checkStackSize(1);
+        int addr = inst.getArg();
+        Object value = stack.pop();
+
+        if (addr >= 0 && addr < globals.size()){
+            globals.set(addr, value);
+        }else {
+            runtimeError("Indice de variavel global invalido: " + addr);
+        }
+    }
+
     // Códigos utilitarios
     private void checkStackSize(int size){
         if (stack.size() < size){
@@ -743,4 +799,5 @@ public class SVirtualMachine {
         }
         throw new RuntimeException(message);
     }
+
 }

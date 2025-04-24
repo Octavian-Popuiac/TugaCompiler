@@ -25,6 +25,9 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     private final TypeChecker typeChecker;
     // Mapa para armazenar os tipos de expressoes
     private final Map<ParseTree, Type> expressionTypes = new HashMap<>();
+    // Mapa para rastrear a posicao de cada variavel na memoria global
+    private Map<String, Integer> variableAddress = new HashMap<>();
+    private int nexVarrAddress = 0;
 
     public BytecodeGenerator(TypeChecker typeChecker){
         this.typeChecker = typeChecker;
