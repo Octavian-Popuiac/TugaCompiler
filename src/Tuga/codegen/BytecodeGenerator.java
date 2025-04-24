@@ -8,6 +8,7 @@ import Tuga.parser.TugaBaseVisitor;
 import Tuga.parser.TugaParser;
 import Tuga.vm.OpCode;
 import Tuga.vm.instruction.*;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -51,6 +52,11 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         // Primeiro, executa o TypeChecker em todo o programa para preencher o mapa de tipos de expressoes
         typeChecker.visitProgram(ctx);
 
+        // Processa declaracoes de variavbeis globais
+        if (ctx.declarations() != null){
+            visit(ctx.declarations());
+        }
+
         // Agora gera o codigo
         for (TugaParser.InstructionContext inst : ctx.instruction()) {
             visit(inst);
@@ -61,22 +67,111 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         return null;
     }
 
-    // INSTRUCTION: 'escreve' expression ';'
     @Override
-    public Void visitInstruction(TugaParser.InstructionContext ctx) {
-        // Gera codigo para a expressao
+    public Void visitDeclarations(TugaParser.DeclarationsContext ctx) {
+        int totalVars = 0;
+
+        // Contar e registar todas as variaveis
+        for (TugaParser.DeclarationContext decl : ctx.declaration()){
+            for (TerminalNode id : decl.variableList().IDENTIFIER()){
+                registerVariabl(id.getText());
+                totalVars++;
+            }
+        }
+
+        // Alocar espaco na memoria global
+        emit(OpCode.galloc, totalVars);
+        return null;
+    }
+
+    @Override
+    public Void visitAssignInstr(TugaParser.AssignInstrContext ctx){
+        // Gerar codigo para a expressao
         visit(ctx.expression());
 
-        // Determina o tipo de expressao e emite a instrucao adequada a impressao
-        Type exprType = getExpressionType(ctx.expression());
+        // Armazenar na variavel
+        String varName = ctx.IDENTIFIER().getText();
+        int adrress = getVariableAddress(varName);
+        emit(OpCode.gstore, adrress);
 
-        switch (exprType){
-            case INTEGER -> emit(OpCode.iprint);
-            case REAL -> emit(OpCode.dprint);
-            case STRING -> emit(OpCode.sprint);
-            case BOOLEAN -> emit(OpCode.bprint);
-            default -> throw new RuntimeException("Tipo nao suportado para impressao: " + exprType);
+        return null;
+    }
+
+    @Override
+    public Void visitEmptyInstr(TugaParser.EmptyInstrContext ctx){
+        return null;
+    }
+
+    @Override
+    public Void visitBlockInstr(TugaParser.BlockInstrContext ctx){
+        for (TugaParser.InstructionContext instr : ctx.instruction()){
+            visit(instr);
         }
+
+        return null;
+    }
+
+    @Override
+    public Void visitWhileInstr(TugaParser.WhileInstrContext ctx){
+        int startLabel = code.size();
+
+        // Gera codigo para a condicao
+        visit(ctx.expression());
+
+        // Posicao onde ficara o jumpf
+        int jumpfPos = code.size();
+        emit(OpCode.jumpf, 0); // Placeholder, sera ajustado depois
+
+        // Gera o codigo para o corpo do loop
+        visit(ctx.instruction());
+
+        // Salto incondicional de volta ao inicio
+        emit(OpCode.jumpf, startLabel);
+
+        // Atualiza o jumpf para saltar para aqui (final loop)
+        int endPos = code.size();
+        ((Instruction1Arg)code.get(jumpfPos)).setArg(endPos);
+
+        return null;
+    }
+
+    @Override
+    public Void visitIfElseInstr(TugaParser.IfElseInstrContext ctx){
+        visit(ctx.expression());
+
+        int jumpfPos = code.size();
+        emit(OpCode.jumpf, 0);
+
+        // Gera codigo para o bloco if
+        visit(ctx.instruction(0));
+
+        // Se tiver else
+        if (ctx.instruction().size() > 1){
+            int jumpPos = code.size();
+            emit(OpCode.jump, 0);
+
+            // Atualiza o jumpf para saltar para o inicio do else
+            int elsePos = code.size();
+            ((Instruction1Arg)code.get(jumpfPos)).setArg(elsePos);
+
+            visit(ctx.instruction(1));
+
+            int endPos = code.size();
+            ((Instruction1Arg)code.get(jumpfPos)).setArg(endPos);
+        }else {
+            // Se nao tive else, atualiza o jumpf para saltar para aqui
+            int endPos = code.size();
+            ((Instruction1Arg)code.get(jumpfPos)).setArg(endPos);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitVarExpr(TugaParser.VarExprContext ctx){
+        String varName = ctx.IDENTIFIER().getText();
+        int address = getVariableAddress(varName);
+        emit(OpCode.gload, address);
 
         return null;
     }
@@ -469,6 +564,19 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
 
             //System.out.println("Bytecodes salvos em " + filename);
         }
+    }
+
+    // Metodo para registrar as variaveis na tabela
+    private void registerVariabl(String name){
+        variableAddress.put(name, nexVarrAddress++);
+    }
+
+    // Método para obter o endereço de uma variável
+    private int getVariableAddress(String name) {
+        if (!variableAddress.containsKey(name)) {
+            throw new RuntimeException("Variável não encontrada: " + name);
+        }
+        return variableAddress.get(name);
     }
 
     public void dumpConstantPool(){
