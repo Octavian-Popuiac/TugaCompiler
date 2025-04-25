@@ -5,8 +5,29 @@ import Tuga.parser.TugaBaseVisitor;
 import Tuga.parser.TugaParser;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class TypeChecker extends TugaBaseVisitor<Type> {
     private SymbolTable symbolTable = new SymbolTable();
+
+    // Lista para armazenar todos os erros encontrados
+    private List<String> errors = new ArrayList<>();
+
+    // Metodo para verificar se existe erros
+    public boolean hasErrors(){
+        return !errors.isEmpty();
+    }
+
+    // Metodo para obter todos os erros
+    public List<String> getErrors(){
+        return errors;
+    }
+
+    // Em vez de lancar excecao, o erro e adicionado a lista
+    private void reportError(String message){
+        errors.add(message);
+    }
 
     @Override
     public Type visitProgram(TugaParser.ProgramContext ctx){
@@ -37,7 +58,15 @@ public class TypeChecker extends TugaBaseVisitor<Type> {
 
         for (TerminalNode id : ctx.variableList().IDENTIFIER()){
             String varName = id.getText();
-            symbolTable.declare(varName, type, id.getSymbol());
+            try {
+                symbolTable.declare(varName, type, id.getSymbol());
+            }catch (TypeCheckingException e){
+                reportError(String.format(
+                        "erro na linha %d: variavel '%s' ja foi declarada",
+                        id.getSymbol().getLine(),
+                        varName
+                ));
+            }
         }
 
         return null;
@@ -54,18 +83,21 @@ public class TypeChecker extends TugaBaseVisitor<Type> {
     public Type visitAssignInstr(TugaParser.AssignInstrContext ctx){
         String varName = ctx.IDENTIFIER().getText();
 
-        // Verificar se a variavel existe
-        Type varType = symbolTable.lookup(varName, ctx.IDENTIFIER().getSymbol());
+        try {
+            Type varType = symbolTable.lookup(varName, ctx.IDENTIFIER().getSymbol());
+            Type exprType = visit(ctx.expression());
 
-        // Verificar o tipo de expressao
-        Type exprType = visit(ctx.expression());
-
-        // Verificar conpatibilidade de tipos
-        if (!isAssignable(varType, exprType)){
-            reportTypeError(ctx.IDENTIFIER().getSymbol(),
-                    "Nao e possivel atribuir " + exprType + " a uma variavel de tipo " + varType);
+            if (!isAssignable(varType,exprType)){
+                reportError(String.format(
+                        "erro na linha %d: operador '<-' eh invalido entre %s e %s",
+                        ctx.IDENTIFIER().getSymbol().getLine(),
+                        varType,
+                        exprType
+                ));
+            }
+        }catch (TypeCheckingException e){
+            reportError(e.getMessage());
         }
-
         return null;
     }
 
@@ -86,7 +118,7 @@ public class TypeChecker extends TugaBaseVisitor<Type> {
 
         if (condType != Type.BOOLEAN){
             reportTypeError(ctx.expression().getStart(),
-                    "Expressao de controlo deve ser do tipo booleana, nao " + condType
+                    "expressao de 'enquanto' nao eh do tipo booleano"
             );
         }
 
@@ -101,7 +133,7 @@ public class TypeChecker extends TugaBaseVisitor<Type> {
 
         if (condType != Type.BOOLEAN){
             reportTypeError(ctx.expression().getStart(),
-                    "Expressao de controlo deve ser do tipo booleana, nao " + condType
+                    "expressao de 'se' nao eh do tipo booleano"
             );
         }
 
@@ -301,7 +333,11 @@ public class TypeChecker extends TugaBaseVisitor<Type> {
     }
 
     private void reportTypeError(Token token, String message){
-        String errorMsg = String.format("Erro de tipo na linha %d:%d - %s", token.getLine(), token.getCharPositionInLine(), message);
-        throw new TypeCheckingException(errorMsg);
+        String errorMsg = String.format(
+                "erro na linha %d: %s",
+                token.getLine(),
+                message
+        );
+        reportError(errorMsg);
     }
 }

@@ -9,6 +9,10 @@ public class SymbolTable {
     private Map<String, VarSymbol> symbols = new HashMap<>();
 
     public void declare(String name, Type type, Token token){
+
+        // System.out.println("Declarando variável: " + name);
+        // System.out.println("Tabela de símbolos atual: " + symbols.keySet());
+
         if (symbols.containsKey(name)){
             throw new TypeCheckingException(
                     String.format(

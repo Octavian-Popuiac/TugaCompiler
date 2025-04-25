@@ -66,16 +66,22 @@ public class TugaCompileAndRun {
             }
 
             TypeChecker typeChecker = new TypeChecker();
-            try {
-                typeChecker.visit(tree);
-            }catch (TypeCheckingException e){
-                if (showTypeCheckingErrors){
-                    System.err.println(e.getMessage());
+
+            // Executa analise semantica
+            typeChecker.visit(tree);
+
+            // Verifica se houve erros semanticos
+            if (typeChecker.hasErrors()){
+                for (String error : typeChecker.getErrors()){
+                    System.out.println(error);
                 }
-                System.out.println("Input has type checking errors");
+
+                if (showTypeCheckingErrors){
+                    System.err.println("Input has type checking errors");
+                }
+
                 return;
             }
-
             // 4. Geracao de bytecodes
             BytecodeGenerator bytecodeGenerator = new BytecodeGenerator(typeChecker);
             bytecodeGenerator.visit(tree);
@@ -96,7 +102,11 @@ public class TugaCompileAndRun {
             System.out.println("*** VM output ***");
             SVirtualMachine vm = new SVirtualMachine();
             vm.execute(outputFilename);
-        }catch (IOException e){
+        }catch (RuntimeException e){
+            if (!"__VM_ERROR__".equals(e.getMessage())){
+                System.err.println("Erro: " +e.getMessage());
+            }
+        } catch (IOException e){
             System.err.println("Erro de I/O: " + e.getMessage());
         }catch (Exception e){
             if (showLexerErrors || showParserErrors || showTypeCheckingErrors){

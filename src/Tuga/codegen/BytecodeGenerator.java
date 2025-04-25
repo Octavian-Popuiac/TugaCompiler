@@ -28,7 +28,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     private final Map<ParseTree, Type> expressionTypes = new HashMap<>();
     // Mapa para rastrear a posicao de cada variavel na memoria global
     private Map<String, Integer> variableAddress = new HashMap<>();
-    private int nexVarrAddress = 0;
+    private int nextVarAddress = 0;
 
     public BytecodeGenerator(TypeChecker typeChecker){
         this.typeChecker = typeChecker;
@@ -68,19 +68,36 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitDeclarations(TugaParser.DeclarationsContext ctx) {
-        int totalVars = 0;
+    public Void visitWriteInstr(TugaParser.WriteInstrContext ctx){
+        // Gera o codigo para a expressao, coloca o valor na pilha
+        visit(ctx.expression());
 
+        Type exprType = getExpressionType(ctx.expression());
+
+        switch (exprType){
+            case INTEGER -> emit(OpCode.iprint);
+            case REAL -> emit(OpCode.dprint);
+            case BOOLEAN -> emit(OpCode.bprint);
+            case STRING -> emit(OpCode.sprint);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitDeclarations(TugaParser.DeclarationsContext ctx) {
         // Contar e registar todas as variaveis
         for (TugaParser.DeclarationContext decl : ctx.declaration()){
-            for (TerminalNode id : decl.variableList().IDENTIFIER()){
-                registerVariable(id.getText());
-                totalVars++;
+            int varCount = decl.variableList().IDENTIFIER().size();
+            if (varCount > 0){
+                emit(OpCode.galloc, varCount);
+
+                for (TerminalNode id : decl.variableList().IDENTIFIER()){
+                    registerVariable(id.getText());
+                }
             }
         }
 
-        // Alocar espaco na memoria global
-        emit(OpCode.galloc, totalVars);
         return null;
     }
 
@@ -157,7 +174,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
             visit(ctx.instruction(1));
 
             int endPos = code.size();
-            ((Instruction1Arg)code.get(jumpfPos)).setArg(endPos);
+            ((Instruction1Arg)code.get(jumpPos)).setArg(endPos);
         }else {
             // Se nao tive else, atualiza o jumpf para saltar para aqui
             int endPos = code.size();
@@ -568,7 +585,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
 
     // Metodo para registrar as variaveis na tabela
     private void registerVariable(String name){
-        variableAddress.put(name, nexVarrAddress++);
+        variableAddress.put(name, nextVarAddress++);
     }
 
     // Método para obter o endereço de uma variável

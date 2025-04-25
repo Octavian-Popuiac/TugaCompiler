@@ -765,7 +765,7 @@ public class SVirtualMachine {
         if (addr >= 0 && addr < globals.size()){
             Object value = globals.get(addr);
             if (value == null){
-                runtimeError("Acesso a Variavel nao inicializada");
+                runtimeError("erro de runtime: tentativa de acesso a valor NULO");
             }
             stack.push(value);
         }else {
@@ -793,11 +793,12 @@ public class SVirtualMachine {
     }
 
     private void runtimeError(String message){
-        System.err.println("Erro de execucao: "+ message);
+        System.out.println(message);
         if (trace){
             System.err.println("Estado da pilha: " + stack);
         }
-        throw new RuntimeException(message);
+
+        throw new RuntimeException("__VM_ERROR__");
     }
 
 }
