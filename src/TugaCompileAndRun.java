@@ -12,9 +12,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 public class TugaCompileAndRun {
     public static boolean showLexerErrors = false;
@@ -67,6 +65,7 @@ public class TugaCompileAndRun {
 
             TypeChecker typeChecker = new TypeChecker();
 
+
             // Executa analise semantica
             typeChecker.visit(tree);
 
@@ -82,8 +81,11 @@ public class TugaCompileAndRun {
 
                 return;
             }
+
+
+
             // 4. Geracao de bytecodes
-            BytecodeGenerator bytecodeGenerator = new BytecodeGenerator(typeChecker);
+            BytecodeGenerator bytecodeGenerator = new BytecodeGenerator(typeChecker, typeChecker.getSymbolTable());
             bytecodeGenerator.visit(tree);
 
             // Exibir codigo assembly se a flag estiver ativa
@@ -97,6 +99,7 @@ public class TugaCompileAndRun {
 
             // Salver bytecode no arquivo de saida
             bytecodeGenerator.saveBytecodes(outputFilename);
+
 
             // 5. Executar o programa compilado
             System.out.println("*** VM output ***");

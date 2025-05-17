@@ -12,6 +12,7 @@ import java.util.Stack;
  * Implementacao da maquina virtual
  */
 public class SVirtualMachine {
+    private int fp = 0;            //  Frame pointer - base do frame de funcao atual
     private final boolean trace;    //  Flag para debug/trace
     private byte[] bytecodes;      //  Bytecodes originais
     private Instruction[] code;    //   Instrucoes decodificadas
@@ -204,6 +205,13 @@ public class SVirtualMachine {
             case galloc -> execGalloc((Instruction1Arg) inst);
             case gload -> execGload((Instruction1Arg) inst);
             case gstore -> execGstore((Instruction1Arg) inst);
+            case lalloc -> execLalloc((Instruction1Arg) inst);
+            case lload -> execLload((Instruction1Arg) inst);
+            case lstore -> execLstore((Instruction1Arg) inst);
+            case pop -> execPop((Instruction1Arg) inst);
+            case call -> execCall((Instruction1Arg) inst);
+            case retval -> execRetval((Instruction1Arg) inst);
+            case ret -> execRet((Instruction1Arg) inst);
 
             //  Instrucoes para inteiros
             case iprint -> execIprint();
@@ -783,6 +791,161 @@ public class SVirtualMachine {
         }else {
             runtimeError("Indice de variavel global invalido: " + addr);
         }
+    }
+
+    private void execLalloc(Instruction1Arg inst){
+        int n = inst.getArg();
+        // Aloca n posicoes no topo da pilha com valor NIL (null)
+        for (int i = 0; i < n; i++){
+            stack.push(null);
+        }
+    }
+
+    private void execLload(Instruction1Arg inst){
+        int addr = inst.getArg();
+        int actualAddr = fp + addr;
+
+        if (actualAddr < stack.size()){
+            Object value = stack.get(actualAddr);
+            if (value == null){
+                runtimeError("erro de runtime: tentativa de acesso a valor NULO");
+            }
+            stack.push(value);
+        }else {
+            runtimeError("Indice de variavel local invalido;: " + addr);
+        }
+    }
+
+    private void execLstore(Instruction1Arg inst){
+        checkStackSize(1);
+        int addr = inst.getArg();
+        int actualAddr = fp + addr;
+        Object value = stack.pop();
+
+        if (actualAddr < stack.size()){
+            stack.set(actualAddr, value);
+        }else {
+            runtimeError("Indice de variavel local invalido: " + addr);
+        }
+    }
+
+    private void execPop(Instruction1Arg inst){
+        int n = inst.getArg();
+        checkStackSize(n);
+        if (stack.size() >= n){
+            for (int i = 0; i < n; i++){
+                stack.pop();
+            }
+        }else {
+            runtimeError("Nao ha elementos suficientes para desempilhar");
+        }
+    }
+
+    private void execCall(Instruction1Arg inst){
+        // Salvar o FP atual (frame anterior)
+        stack.push(fp);
+
+        // Salvar o endereco de retorno (IP+1)
+        stack.push(ip + 1);
+
+        // Atualizar FP para apontar para o indice do novo frame
+        fp = stack.size() - 2; // -2 para considerar o FP e IP que foram empilhados
+
+        // Atualizar IP para o endereco da funcao (-1 porque ip sera incrementado depois da execucao)
+        ip = inst.getArg() - 1;
+    }
+
+    private void execRetval(Instruction1Arg inst){
+        // Primeiro, obter o valor de retorno (deve estar no topo da pilha)
+        if (stack.isEmpty()) {
+            runtimeError("Pilha vazia ao tentar retornar valor");
+            return;
+        }
+        // Guardar valor de retorno
+        Object returnValue = stack.pop();
+
+
+        // Obter valores de FP e IP salvos corretamente
+        if (fp < 0 || fp >= stack.size()) {
+            runtimeError("Frame pointer inválido: " + fp);
+            return;
+        }
+
+        // Verificar se podemos acessar o endereço de retorno
+        if (fp + 1 >= stack.size()) {
+            runtimeError(
+                    String.format(
+                            "Frame inconsistente: impossível acessar IP de retorno | IP : %d | Stack Size %d",
+                            fp+1,
+                            stack.size()
+                    )
+            );
+            return;
+        }
+
+        // Recuperar IP
+        int savedIP = (Integer) stack.get(fp + 1);
+
+        // Recuperar FP antigo
+        int savedFP = (Integer) stack.get(fp);
+
+        // Recuperar FP e IP do frame atual
+        int frameSize = stack.size() - fp;
+
+        // Remover a frame atual
+        for (int i = 0; i < frameSize; i++){
+            stack.pop();
+        }
+
+        // Remover argumentos
+        int nArgs = inst.getArg();
+        for (int i = 0; i < nArgs && !stack.isEmpty(); i++){
+            stack.pop();
+        }
+
+        // Empilhar valor de retorno
+        stack.push(returnValue);
+
+        // Restaurar IP e FP
+        ip = savedIP - 1; // -1 porque ele e incrementado depois da execucao
+        fp = savedFP;
+    }
+
+    private void execRet(Instruction1Arg inst){
+
+        // Verificar se o fp é válido
+        if (fp < 0 || fp >= stack.size()) {
+            runtimeError("Frame pointer inválido: " + fp);
+            return;
+        }
+
+        // Recuperar FP e IP do frame atual
+        int frameSize = stack.size() - fp;
+
+        // Recuperar IP
+        if (fp + 1 >= stack.size()) {
+            runtimeError("Frame inconsistente");
+        }
+        Object savedIP = stack.get(fp + 1);
+
+        // Recuperar FP
+        Object savedFP = stack.get(fp);
+
+        // Remover frame atual
+        for (int i = 0; i < frameSize; i++){
+            stack.pop();
+        }
+
+        // Remover argumentos
+        int nArgs = inst.getArg();
+        checkStackSize(nArgs);
+        for (int i = 0; i < nArgs; i++){
+            stack.pop();
+        }
+
+        // Restaurar IP e FP
+        ip = (Integer) savedIP - 1;
+        fp = (Integer) savedFP;
     }
 
     // Códigos utilitarios

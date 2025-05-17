@@ -13,6 +13,13 @@ public enum OpCode {
     galloc(1),  // 43: Global memory allocation: Aloca n posicoes num array que permite armazenar variaveis globais. Array designado por Globals. Essas n posicoes de memoria ficam inicializadas com o valor NULO
     gload(1),   // 44: Global load: Empilha Globals[addr] no stakc
     gstore(1),  // 45: Global store: Faz pop do stack e guarda o valor em Globals[addr]
+    lalloc(1),  // 46: Local memory allocation: Aloca n posicoes no topo do stack para armazenar variaveis locais. Essas n posicoes de memoria ficam inicializads com o valor NIL
+    lload(1),   // 47: Local load: Empilha o conteudo de Stack[FP + addr] no stack
+    lstore(1),  // 48: Local store: Faz pop do stack e guarda o valor em Stack[FP + addr]
+    pop(1),     // 49: Desempilha n elementos do stack
+    call(1),    // 50: Cria um novo frame no stack, que passara a ser o frame currente. Guarda FP, atualiza FP para a base do novo frame, empilha endereco de retorno. Atualiza IP para o endereco da funcao
+    retval(1),  // 51: Return from non-void function: Faz x = pop(), desempilha o espaco reservado para as variaveis locais usadas pela funcao, restaura o estado da maquina virtual, desempilha os n argumentos do stack, e depois empilha x
+    ret(1),     // 52: Return from void function: Desempilha os espaco reservado para as variaveis locais usadas pela funcao, restaura o estado da maquina virtual, e desempilha os n argumentos do stack
 
     //  Instrucoes sem argumentos (1 byte, apenas o opcode)
     iprint(0),  // 3: Faz pop do operando a, e escreve o seu valor no ecra seguido de um caracter de mudanca de linha (inteiro)

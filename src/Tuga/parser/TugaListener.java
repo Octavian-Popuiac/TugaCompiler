@@ -18,6 +18,56 @@ public interface TugaListener extends ParseTreeListener {
 	 */
 	void exitProgram(TugaParser.ProgramContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link TugaParser#globals}.
+	 * @param ctx the parse tree
+	 */
+	void enterGlobals(TugaParser.GlobalsContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#globals}.
+	 * @param ctx the parse tree
+	 */
+	void exitGlobals(TugaParser.GlobalsContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link TugaParser#functionDecl}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionDecl(TugaParser.FunctionDeclContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#functionDecl}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionDecl(TugaParser.FunctionDeclContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link TugaParser#paramList}.
+	 * @param ctx the parse tree
+	 */
+	void enterParamList(TugaParser.ParamListContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#paramList}.
+	 * @param ctx the parse tree
+	 */
+	void exitParamList(TugaParser.ParamListContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link TugaParser#param}.
+	 * @param ctx the parse tree
+	 */
+	void enterParam(TugaParser.ParamContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#param}.
+	 * @param ctx the parse tree
+	 */
+	void exitParam(TugaParser.ParamContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link TugaParser#block}.
+	 * @param ctx the parse tree
+	 */
+	void enterBlock(TugaParser.BlockContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#block}.
+	 * @param ctx the parse tree
+	 */
+	void exitBlock(TugaParser.BlockContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link TugaParser#declarations}.
 	 * @param ctx the parse tree
 	 */
@@ -130,6 +180,50 @@ public interface TugaListener extends ParseTreeListener {
 	 */
 	void exitEmptyInstr(TugaParser.EmptyInstrContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code FunctionCallInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionCallInstr(TugaParser.FunctionCallInstrContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code FunctionCallInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionCallInstr(TugaParser.FunctionCallInstrContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code ReturnInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 */
+	void enterReturnInstr(TugaParser.ReturnInstrContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code ReturnInstr}
+	 * labeled alternative in {@link TugaParser#instruction}.
+	 * @param ctx the parse tree
+	 */
+	void exitReturnInstr(TugaParser.ReturnInstrContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link TugaParser#functionCall}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionCall(TugaParser.FunctionCallContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#functionCall}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionCall(TugaParser.FunctionCallContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link TugaParser#exprList}.
+	 * @param ctx the parse tree
+	 */
+	void enterExprList(TugaParser.ExprListContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link TugaParser#exprList}.
+	 * @param ctx the parse tree
+	 */
+	void exitExprList(TugaParser.ExprListContext ctx);
+	/**
 	 * Enter a parse tree produced by the {@code AndExpr}
 	 * labeled alternative in {@link TugaParser#expression}.
 	 * @param ctx the parse tree
@@ -153,6 +247,18 @@ public interface TugaListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitEqualityExpr(TugaParser.EqualityExprContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code FunctionalCallExpr}
+	 * labeled alternative in {@link TugaParser#expression}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionalCallExpr(TugaParser.FunctionalCallExprContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code FunctionalCallExpr}
+	 * labeled alternative in {@link TugaParser#expression}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionalCallExpr(TugaParser.FunctionalCallExprContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code ComparisonExpr}
 	 * labeled alternative in {@link TugaParser#expression}.

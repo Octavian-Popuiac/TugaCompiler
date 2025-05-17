@@ -4,7 +4,9 @@ public enum Type {
     BOOLEAN,
     INTEGER,
     STRING,
-    REAL;
+    REAL,
+    ERROR,
+    VOID;
 
     @Override
     public String toString(){
@@ -13,6 +15,8 @@ public enum Type {
             case INTEGER -> "inteiro";
             case STRING -> "string";
             case REAL -> "real";
+            case VOID -> "vazio";
+            case ERROR -> "erro";
         };
     }
 }
