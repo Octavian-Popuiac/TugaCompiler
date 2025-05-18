@@ -1,7 +1,9 @@
 package Tuga.vm;
 
 /**
- *  Codigos de instrucao da maquina virtual
+ * Codigos de instrucao da maquina virtual Tuga.
+ * Define as instrucoes suportadas pela maquina virtual,
+ * incluindo o seu nome, numero de argumentos e comportamento.
  */
 public enum OpCode {
     //  Instrucoes com 1 argumento (5 bytes: 1 byte opcode + 4 bytes argumento)
@@ -63,16 +65,35 @@ public enum OpCode {
     not(0),     // 38: Boolean not: Faz pop do operando direito a (supostamente do tipo boolean), e empilha o valor lógico not a no stack (operador NOT)
     btos(0),    // 39: Converte o valor boolean que esta no topo do stack para uma string (conversão boolean -> string)
     halt(0);    // 40: termina a execução
-    private final int nArgs; // numero de argumentos
 
+    /** Numero de argumentos que cada instrucao requer */
+    private final int nArgs;
+
+    /**
+     * Cria um novo codigo de operacao com o numero de argumentos especificado.
+     *
+     * @param nArgs O numero de argumentos da instrucao (0 ou 1)
+     */
     OpCode(int nArgs){
         this.nArgs = nArgs;
     }
 
+    /**
+     * Obtem o numero de argumentos desta instrucao.
+     *
+     * @return 0 para instrucoes sem argumentos, 1 para instrucoes com um argumento
+     */
     public int nArgs(){
         return nArgs;
     }
 
+    /**
+     * Converte um valor de byte num codigo de operacao.
+     * Util para decodificar instrucoes a partir de bytecode.
+     *
+     * @param value O valor de byte a converter
+     * @return O codigo de operacao correspondente
+     */
     public static OpCode convert(byte value){
         return OpCode.values()[value];
     }

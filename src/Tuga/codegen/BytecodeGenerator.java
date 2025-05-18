@@ -17,6 +17,20 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import java.io.*;
 import java.util.*;
 
+/**
+ * Gerador de bytecode para a maquina virtual.
+ * Esta classe e responsavel pela ultima fase da compilacao, transformando
+ * a arvore sintatica validada em codigo de bytes executavel pela maquina virtual.
+ * O gerador visita a arvore sintatica e gera instrucoes correspondentes para
+ * cada construcao da linguagem, incluindo:
+ * - Declaracoes de variaveis e funcoes
+ * - Expressoes aritmeticas e logicas
+ * - Estruturas de controle de fluxo (condicionais e repeticoes)
+ * - Chamadas de funcao e atribuicoes
+ * Tambem gerencia a pool de constantes para valores literais (strings e numeros reais)
+ * e mantem informacoes sobre variaveis locais e globais para geracao adequada de
+ * instrucoes de acesso a memoria.
+ */
 public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     // ---- Geracao de Codigo ----
     /** As instrucoes de bytecode geradas */
@@ -54,27 +68,6 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
     /** Nome da funcao que esta a ser processada actualmente */
     private String currentFunction = null;
 
-
-    /*
-    // O codigo gerado (instrucoes)
-    private final ArrayList<Instruction> code = new ArrayList<>();
-    // Constant pools para valores reais e strings
-    private final ConstantPool constantPool;
-    // TypeChecker para determinar os tipos de expressoes
-    private final TypeChecker typeChecker;
-    // Mapa para armazenar os tipos de expressoes
-    private final Map<ParseTree, Type> expressionTypes = new HashMap<>();
-    // Mapa para rastrear a posicao de cada variavel na memoria global
-    private Map<String, Integer> variableAddress = new HashMap<>();
-    private int nextVarAddress = 0;
-    private Map<String, Integer> functionAddresses = new HashMap<>();
-    private Map<String, Integer> currentLocalVars = new HashMap<>();
-    private int nextLocalAdrress = 2;
-    private boolean inGlobalScope = true;
-    private String currentFunction = null;
-    private final SymbolTable symbolTable;
-    private Map<String, List<Integer>> callsToBackatch = new HashMap<>();
-     */
 
     /**
      * Construtor da classe BytecodeGenerator.
@@ -202,9 +195,17 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
                 }
             }else {
                 // Variaveis locais
+                int localVarsCount = nextLocalAdrress;
+
                 for (TerminalNode id : decl.variableList().IDENTIFIER()){
                     String varName = id.getText();
                     currentLocalVars.put(varName, nextLocalAdrress++);
+                }
+
+                int varCount = nextLocalAdrress - localVarsCount;
+
+                if (varCount > 0){
+                    emit(OpCode.lalloc, varCount);
                 }
             }
         }
@@ -258,57 +259,6 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
 
         return null;
     }
-    /*
-    @Override
-    public Void visitAssignInstr(TugaParser.AssignInstrContext ctx){
-        System.out.println("DEBUG: Processando atribuição: " + ctx.IDENTIFIER().getText() + " <- " + ctx.expression().getText());
-        System.out.println("DEBUG: Tipo da expressão: " + ctx.expression().getClass().getName());
-        // Gerar codigo para a expressao
-        visit(ctx.expression());
-
-        // Armazenar na variavel
-        String varName = ctx.IDENTIFIER().getText();
-        System.out.println("DEBUG: Variavel Name em AssignInstr: " + varName + " | Globa? " + inGlobalScope);
-
-        Symbol symbol = symbolTable.lookupSymbol(varName);
-
-        if (symbol == null){
-            throw new RuntimeException("Variavel nao encontrada: " + varName);
-        }
-
-        if (!inGlobalScope){
-            if (currentLocalVars.containsKey(varName)){
-                int adrress = currentLocalVars.get(varName);
-                emit(OpCode.lstore, adrress);
-            }else {
-                Scope scope = symbolTable.getScopeForSymbol(varName);
-                if (scope != null && !scope.getName().equals("__global__")){
-                    int adrress = nextLocalAdrress++;
-                    currentLocalVars.put(varName, adrress);
-                    emit(OpCode.lstore, adrress);
-                }else {
-                    int adrress = getVariableAddress(varName);
-                    emit(OpCode.gstore, adrress);
-                }
-            }
-            /*
-            // Variavel local ou parametro
-            System.out.println();
-            System.out.println("| LSTORE |");
-            int address = currentLocalVars.get(varName);
-            System.out.println("Adrress: " + address + " | CurrentLocalVars: " + currentLocalVars);
-            emit(OpCode.lstore, address);
-
-
-        }else {
-            // Variavel local
-            int address = getVariableAddress(varName);
-            emit(OpCode.gstore, address);
-        }
-
-        return null;
-    }
-    */
 
 
     /**
@@ -372,10 +322,6 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
 
         int blockVarCount = nextLocalAdrress - savedNextLocalAddr;
 
-        if (!isFunctionBlock && blockVarCount > 0){
-            emit(OpCode.lalloc, blockVarCount);
-        }
-
         boolean hasReturn = false;
 
         for (TugaParser.InstructionContext instr : ctx.instruction()){
@@ -436,108 +382,6 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         return false;
     }
 
-    /*
-    @Override
-    public Void visitBlockInstr(TugaParser.BlockInstrContext ctx){
-        String blockId = "bloco_" + ctx.hashCode() + "_" + ctx.getStart().getLine();
-        System.out.println("\n| Entering BLOCK: " + blockId + " |\n");
-
-        Scope currentScope = symbolTable.getCurrentScope();
-        Scope blockScope = findMatchingBlockScope(currentScope, blockId);
-
-        BlockFrame parentFrame = blockFrames.isEmpty() ? null : blockFrames.peek();
-        BlockFrame frame = new BlockFrame(
-                parentFrame,
-                currentLocalVars,
-                nextLocalAdrress,
-                blockScope,
-                blockId
-        );
-
-        blockFrames.push(frame);
-
-        if (blockScope != null) {
-            symbolTable.setCurrentScope(blockScope);
-            System.out.println("DEBUG: Entered block scope: " + blockScope.getName());
-        }
-
-        if (ctx.declarations() != null) {
-            visit(ctx.declarations());
-        }
-
-        frame.varCount = nextLocalAdrress - frame.basedAddress;
-
-        if (frame.varCount > 0) {
-            System.out.println("DEBUG: Allocating " + frame.varCount + " local variables for block");
-            emit(OpCode.lalloc, frame.varCount);
-        };
-
-        for (TugaParser.InstructionContext instr : ctx.instruction()) {
-            visit(instr);
-        }
-
-        if (frame.varCount > 0) {
-            System.out.println("DEBUG: Popping " + frame.varCount + " local variables from block");
-            emit(OpCode.pop, frame.varCount);
-        }
-
-        blockFrames.pop();
-        if (!blockFrames.isEmpty()) {
-            BlockFrame paiFrame = blockFrames.peek();
-            currentLocalVars = paiFrame.localVars;
-            nextLocalAdrress = paiFrame.basedAddress + paiFrame.varCount;
-        } else {
-            // If we're back at the function level
-            currentLocalVars = new HashMap<>();
-            nextLocalAdrress = 2; // Reset to function scope base
-        }
-
-        symbolTable.setCurrentScope(currentScope);
-
-        System.out.println("DEBUG: Exited block scope: " + blockId);
-
-        return null;
-    }
-
-     */
-
-    /*
-    @Override
-    public Void visitBlockInstr(TugaParser.BlockInstrContext ctx){
-        System.out.println("\n| Entering new BLOCK |\n");
-        blockScopes.push(new HashMap<>(currentLocalVars));
-        int savedNextLocalAdr = nextLocalAdrress;
-
-        Scope savedScope = symbolTable.getCurrentScope();
-
-        if (ctx.declarations() != null){
-            visit(ctx.declarations());
-        }
-
-        int localVarCount = nextLocalAdrress - savedNextLocalAdr;
-
-        if (localVarCount > 0){
-            System.out.println("DEBUG: allocating " + localVarCount + " local variabels for block\n");
-            emit(OpCode.lalloc, localVarCount);
-        }
-
-        for (TugaParser.InstructionContext instr : ctx.instruction()){
-            visit(instr);
-        }
-
-        if (localVarCount > 0){
-            System.out.println("DEBUG: Popping " + localVarCount + " local variables from block");
-            emit(OpCode.pop, localVarCount);
-        }
-
-        currentLocalVars = blockScopes.pop();
-        nextLocalAdrress = savedNextLocalAdr;
-
-        System.out.println("DEBUG: Exited block scope");
-
-        return null;
-    }
-
     @Override
     public Void visitWhileInstr(TugaParser.WhileInstrContext ctx){
         int startLabel = code.size();
@@ -562,7 +406,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         return null;
     }
 
-     */
+
 
     /**
      * Gera codigo bytecode para instrucoes condicionais (se-senao).
@@ -698,9 +542,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
      */
     @Override
     public Void visitParenExpr(TugaParser.ParenExprContext ctx) {
-        Type exprType = typeChecker.visit(ctx.expression());
-        visit(ctx.expression());
-        return null;
+        return visit(ctx.expression());
     }
 
     /**
@@ -1072,10 +914,8 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         }
 
         // Alcoar espaco para variaveis locais
+
         int localVarCount = nextLocalAdrress - 2;
-        if (localVarCount > 0){
-            emit(OpCode.lalloc, localVarCount);
-        }
 
         // Processar instrucoes do corpo da funcao
         for (TugaParser.InstructionContext instr : ctx.block().instruction()){
@@ -1231,12 +1071,6 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
         }
 
         symbolTable.setCurrentScope(functionSymbol.scope);
-        /*
-        if (funcSymbol instanceof FunctionSymbol func){
-            symbolTable.setCurrentScope(func.scope);
-            System.out.println("DEBUG: Mudando para escopo da função: " + funcName);
-        }
-         */
 
         int callPos = code.size();
 
@@ -1269,62 +1103,6 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
 
         return null;
     }
-
-    /*
-    @Override
-    public Void visitFunctionCall(TugaParser.FunctionCallContext ctx){
-        System.out.println("------------------");
-        String funcName = ctx.IDENTIFIER().getText();
-
-        System.out.println("DEBUG: Processando chamada para função " + funcName);
-
-        Scope oldScope = symbolTable.getCurrentScope();
-        // Empilhar argumentos
-        if (ctx.exprList() != null){
-            int argCount = ctx.exprList().expression().size();
-            System.out.println("DEBUG: Número de argumentos: " + argCount);
-            for (int i = 0 ; i < argCount; i++){
-                TugaParser.ExpressionContext expr = ctx.exprList().expression(i);
-                System.out.println("DEBUG: Processando argumento " + (i+1) + ": " + expr.getText());
-                visit(expr);
-                System.out.println("DEBUG: Argumento " + (i+1) + " processado");
-            }
-        }else {
-            System.out.println("DEBUG: Função sem argumentos");
-        }
-
-        Symbol funcSymbol = symbolTable.lookupSymbol(funcName);
-        int callPos = code.size();
-
-        if (funcSymbol instanceof FunctionSymbol func){
-            symbolTable.setCurrentScope(func.scope);
-            System.out.println("DEBUG: Mudando para escopo da função: " + funcName + " | Escopo: " + func.scope.toString());
-        }
-
-        // Chamar a funcao
-        if (!functionAddresses.containsKey(funcName)){
-            throw new RuntimeException("TESTE - Funcao nao declarada: " + funcName);
-        }
-
-        System.out.println("DEBUG: Emitindo call para função " + funcName + " no endereço " + functionAddresses.get(funcName));
-        emit(OpCode.call, functionAddresses.get(funcName));
-
-        // Para chamadas de funcao como instrucao, descarto o valor de retorno se houver
-        if (ctx.parent instanceof TugaParser.FunctionCallInstrContext){
-            // Verificar se a funcao retorna um valor
-            if (typeChecker.visit(ctx) != null){
-                emit(OpCode.pop, 1); // Descartar valor de retorno
-            }
-        }
-
-        System.out.println("------------------");
-        symbolTable.setCurrentScope(oldScope);
-        System.out.println("DEBUG: Restaurando escopo original");
-
-        return null;
-    }
-
-     */
 
     /**
      * Gera codigo bytecode para referenciar uma variavel.
@@ -1556,7 +1334,7 @@ public class BytecodeGenerator extends TugaBaseVisitor<Void> {
      */
     private int getVariableAddress(String name) {
         if (!variableAddress.containsKey(name)) {
-            throw new RuntimeException("Variável não encontrada: " + name);
+            throw new RuntimeException("Variavel nao encontrada: " + name);
         }
         return variableAddress.get(name);
     }

@@ -9,22 +9,39 @@ import java.util.List;
 import java.util.Stack;
 
 /**
- * Implementacao da maquina virtual
+ * Implementacao da maquina virtual Tuga.
+ * Executa os bytecodes gerados pelo compilador, gerenciando a pilha de execucao,
+ * funcoes, variaveis globais e locais, e operacoes aritmeticas e logicas.
+ * Fornece suporte para todos os tipos da linguagem Tuga (inteiros, reais, strings e booleanos).
  */
 public class SVirtualMachine {
-    private int fp = 0;            //  Frame pointer - base do frame de funcao atual
-    private final boolean trace;    //  Flag para debug/trace
-    private byte[] bytecodes;      //  Bytecodes originais
-    private Instruction[] code;    //   Instrucoes decodificadas
-    private int ip;                //  Instruction pointes
-    private final Stack<Object> stack;  //  Pilha de execucao
-    private final ConstantPool constantPool;    //  Pool de constantes
-    private List<Object> globals = new ArrayList<>();    // Global memory allocation array
+    /** Frame pointer - base do frame de funcao atual */
+    private int fp = 0;
+    /** Flag para ativar modo de depuracao com saida detalhada */
+    private final boolean trace;
+    /** Instrucoes decodificadas prontas para execucao */
+    private Instruction[] code;
+    /** Instruction pointer - indice da instrucao atual */
+    private int ip;
+    /** Pilha de execucao da maquina virtual */
+    private final Stack<Object> stack;
+    /** Pool de constantes (strings e valores reais) */
+    private final ConstantPool constantPool;
+    /** Array para armazenamento de variaveis globais */
+    private List<Object> globals = new ArrayList<>();
 
+    /**
+     * Cria uma nova instancia da maquina virtual com modo trace desativado.
+     */
     public SVirtualMachine(){
         this(false);
     }
 
+    /**
+     * Cria uma nova instancia da maquina virtual.
+     *
+     * @param trace Se true, imprime informacoes detalhadas durante a execucao
+     */
     public SVirtualMachine(boolean trace){
         this.trace = trace;
         this.stack = new Stack<>();
@@ -33,7 +50,10 @@ public class SVirtualMachine {
     }
 
     /**
-     * Executa o programa em bytecode do arquivo fornecido
+     * Executa o programa em bytecode do arquivo fornecido.
+     * Le a pool de constantes e depois as instrucoes.
+     *
+     * @param bytecodeFile Caminho para o arquivo de bytecode
      */
     public void execute(String bytecodeFile){
         try (DataInputStream dis = new DataInputStream(new FileInputStream(bytecodeFile))){
@@ -46,7 +66,11 @@ public class SVirtualMachine {
     }
 
     /**
-     * Le a constant pool do arquivo de bytecodes
+     * Le a constant pool do arquivo de bytecodes.
+     * Cada constante tem um tipo (1=double, 2=string) seguido do valor.
+     *
+     * @param dis Stream de entrada para leitura dos bytecodes
+     * @throws IOException Em caso de erro de leitura
      */
     private void readConstantPool(DataInputStream dis) throws IOException{
         int poolSize = dis.readInt();
@@ -79,7 +103,7 @@ public class SVirtualMachine {
                 String value = sb.toString();
                 constantPool.addString(value);
                 if (trace){
-                    System.out.println("    Entrada "+ i + ": string \"" + value + "\"");
+                    System.out.println("Entrada "+ i + ": string \"" + value + "\"");
                 }
             }else {
                 throw new IOException("Tipo de constante desconhecido: "+ type);
@@ -88,7 +112,10 @@ public class SVirtualMachine {
     }
 
     /**
-     * Le e executa as instrucoes do arquivo de bytecodes
+     * Le e executa as instrucoes do arquivo de bytecodes.
+     *
+     * @param dis Stream de entrada para leitura dos bytecodes
+     * @throws IOException Em caso de erro de leitura
      */
     private void readAndExecuteInstructions(DataInputStream dis) throws IOException{
         //Decodifica os bytecodes em instrucoes
@@ -123,43 +150,8 @@ public class SVirtualMachine {
     }
 
     /**
-     * Decodigica os bytecodes em instrucoes
-     */
-    private void decode(byte[] bytecodes){
-        List<Instruction> instructions = new ArrayList<>();
-
-        try (DataInputStream din = new DataInputStream(new ByteArrayInputStream(bytecodes))){
-            while (true){
-                byte b = din.readByte();
-                OpCode opCode = OpCode.convert(b);
-
-                switch (opCode.nArgs()){
-                    case 0:
-                        instructions.add(new Instruction(opCode));
-                        break;
-                    case 1:
-                        int value = din.readInt();
-                        instructions.add(new Instruction1Arg(opCode, value));
-                        break;
-                    default:
-                        throw new RuntimeException("Numero de argumentos invalidos: " + opCode.nArgs());
-                }
-            }
-        } catch (EOFException e) {
-            //Fim dos bytecodes, converte a lista em array
-            this.code = new Instruction[instructions.size()];
-
-            if (trace){
-                System.out.println("Bytecodes decodificados: ");
-                dumpInstructions();
-            }
-        } catch (IOException e){
-            System.err.println("Erro ao decodificar bytecodes: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Imprime as instrucoes decodificadas
+     * Imprime as instrucoes decodificadas para depuracao.
+     * Mostra o indice e a representacao textual de cada instrucao.
      */
     private void dumpInstructions(){
         for (int i = 0; i < code.length; i++){
@@ -168,7 +160,9 @@ public class SVirtualMachine {
     }
 
     /**
-     * Executa o programa
+     * Executa o programa carregado na maquina virtual.
+     * Processa cada instrucao sequencialmente ate o fim do codigo
+     * ou ate encontrar uma instrucao HALT.
      */
     private void run(){
         if (trace){
@@ -186,7 +180,10 @@ public class SVirtualMachine {
     }
 
     /**
-     * Executa uma instrucao
+     * Executa uma instrucao da maquina virtual.
+     * Seleciona o metodo apropriado com base no OpCode da instrucao.
+     *
+     * @param inst A instrucao a ser executada
      */
     private void executeInstruction(Instruction inst){
         if (trace){
@@ -265,20 +262,6 @@ public class SVirtualMachine {
         }
     }
 
-    /**
-     * Troca os dois elemntos no topo da pilha
-     */
-    private void execSwap() {
-        checkStackSize(2);
-        Object b = stack.pop();
-        Object a = stack.pop();
-        stack.push(b);
-        stack.push(a);
-    }
-
-    /**
-     * Controlo de execucao
-     */
     private void execHalt() {
         // Termina a execução do programa, defenindo o ip para o final do código
         ip = code.length;
@@ -319,7 +302,7 @@ public class SVirtualMachine {
         Object b = stack.pop();
         Object a = stack.pop();
         if (a instanceof Integer && b instanceof Integer) {
-            // Verificar se são booleanos (0 ou 1)
+            // Verificar se sao booleanos (0 ou 1)
             int aVal = (Integer)a;
             int bVal = (Integer)b;
             if ((aVal == 0 || aVal == 1) && (bVal == 0 || bVal == 1)) {
@@ -337,7 +320,7 @@ public class SVirtualMachine {
         Object b = stack.pop();
         Object a = stack.pop();
         if (a instanceof Integer && b instanceof Integer) {
-            // Verificar se são booleanos (0 ou 1)
+            // Verificar se sao booleanos (0 ou 1)
             int aVal = (Integer)a;
             int bVal = (Integer)b;
             if ((aVal == 0 || aVal == 1) && (bVal == 0 || bVal == 1)) {
@@ -355,7 +338,7 @@ public class SVirtualMachine {
         Object b = stack.pop();
         Object a = stack.pop();
         if (a instanceof Integer && b instanceof Integer) {
-            // Verificar se são booleanos (0 ou 1)
+            // Verificar se sao booleanos (0 ou 1)
             int aVal = (Integer)a;
             int bVal = (Integer)b;
             if ((aVal == 0 || aVal == 1) && (bVal == 0 || bVal == 1)) {
@@ -373,7 +356,7 @@ public class SVirtualMachine {
         Object b = stack.pop();
         Object a = stack.pop();
         if (a instanceof Integer && b instanceof Integer) {
-            // Verificar se são booleanos (0 ou 1)
+            // Verificar se sao booleanos (0 ou 1)
             int aVal = (Integer)a;
             int bVal = (Integer)b;
             if ((aVal == 0 || aVal == 1) && (bVal == 0 || bVal == 1)) {
@@ -514,7 +497,7 @@ public class SVirtualMachine {
             if ((Double)b != 0.0) {
                 stack.push((Double)a / (Double)b);
             } else {
-                runtimeError("Divisão por zero");
+                runtimeError("Divisao por zero");
             }
         } else {
             runtimeError("DDIV espera dois reais");
@@ -632,7 +615,7 @@ public class SVirtualMachine {
         Object b = stack.pop();
         Object a = stack.pop();
         if (a instanceof Integer && b instanceof Integer) {
-            stack.push(((Integer)a).equals(b) ? 1 : 0); // Representação de booleano como inteiro
+            stack.push(((Integer)a).equals(b) ? 1 : 0); // Representacao de booleano como inteiro
         } else {
             runtimeError("IEQ espera dois inteiros");
         }
@@ -666,7 +649,7 @@ public class SVirtualMachine {
                 runtimeError("Divisao por zero");
             }
         }else {
-            runtimeError("Operandos incompatíveis para IDIV");
+            runtimeError("Operandos incompativeis para IDIV");
         }
     }
 
@@ -678,7 +661,7 @@ public class SVirtualMachine {
         if (a instanceof Integer && b instanceof Integer){
             stack.push((Integer) a * (Integer) b);
         }else {
-            runtimeError("Operandos incompatíveis para IMUL");
+            runtimeError("Operandos incompativeis para IMUL");
         }
     }
 
@@ -690,7 +673,7 @@ public class SVirtualMachine {
         if (a instanceof Integer && b instanceof Integer){
             stack.push((Integer) a - (Integer) b);
         }else {
-            runtimeError("Operandos incompatíveis para ISUB");
+            runtimeError("Operandos incompativeis para ISUB");
         }
     }
 
@@ -702,7 +685,7 @@ public class SVirtualMachine {
         if (a instanceof Integer && b instanceof Integer){
             stack.push((Integer) a + (Integer) b);
         }else {
-            runtimeError("Operandos incompatíveis para IADD");
+            runtimeError("Operandos incompativeis para IADD");
         }
     }
 
@@ -867,7 +850,7 @@ public class SVirtualMachine {
 
         // Obter valores de FP e IP salvos corretamente
         if (fp < 0 || fp >= stack.size()) {
-            runtimeError("Frame pointer inválido: " + fp);
+            runtimeError("Frame pointer invalido: " + fp);
             return;
         }
 
@@ -875,7 +858,7 @@ public class SVirtualMachine {
         if (fp + 1 >= stack.size()) {
             runtimeError(
                     String.format(
-                            "Frame inconsistente: impossível acessar IP de retorno | IP : %d | Stack Size %d",
+                            "Frame inconsistente: impossivel acessar IP de retorno | IP : %d | Stack Size %d",
                             fp+1,
                             stack.size()
                     )
@@ -915,7 +898,7 @@ public class SVirtualMachine {
 
         // Verificar se o fp é válido
         if (fp < 0 || fp >= stack.size()) {
-            runtimeError("Frame pointer inválido: " + fp);
+            runtimeError("Frame pointer invalido: " + fp);
             return;
         }
 
